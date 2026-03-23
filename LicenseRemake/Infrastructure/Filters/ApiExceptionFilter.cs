@@ -3,6 +3,7 @@ using LicenseRemake.Domain.Errors;
 using LicenseRemake.DTO.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using LicenseRemake.Domain.Helpers;
 
 namespace LicenseRemake.Infrastructure.Filters;
 
@@ -34,7 +35,8 @@ public class ApiExceptionFilter : IExceptionFilter
                 err_code = ex.Code,
                 err_code_string = ex.CodeString,
                 err_descr = ex.Param ?? ex.ErrorCode.ToString(),
-                param = ex.Param
+                param = ex.Param,
+                time_stamp = DateUtils.ToKyiv(DateTime.UtcNow)
             };
         }
         else
@@ -45,7 +47,8 @@ public class ApiExceptionFilter : IExceptionFilter
             {
                 err_code = (int)ResponseErrorCode.UndefinedError,
                 err_code_string = "undefined_error",
-                err_descr = context.Exception.Message
+                err_descr = context.Exception.Message,
+                time_stamp = DateUtils.ToKyiv(DateTime.UtcNow)
             };
         }
 

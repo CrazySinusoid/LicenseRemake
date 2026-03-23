@@ -1,5 +1,6 @@
 ﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.DTO.AdminPanel;
+using LicenseRemake.DTO.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,51 +18,51 @@ public class AccountController : ControllerBase
 
     [HttpPost("create-admin")]
     [AllowAnonymous]
-    public async Task<IActionResult> CreateAdmin(CancellationToken ct)
+    public async Task<ActionResult<OperationResult>> CreateAdmin(CancellationToken ct)
     {
         await _service.CreateAdminAsync(ct);
-        return Ok();
+        return Ok(new OperationResult(true));
     }
 
     [HttpPost("create")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, CancellationToken ct)
+    public async Task<ActionResult<CreateUserResponse>> CreateUser([FromBody] CreateUserRequest request, CancellationToken ct)
     {
-        await _service.CreateUserAsync(
+        var id = await _service.CreateUserAsync(
             request.UserName,
             request.Password,
             request.UserTypeId,
             ct);
 
-        return Ok();
+        return Ok(new CreateUserResponse(id));
     }
 
     [HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    public async Task<ActionResult<OperationResult>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
     {
         await _service.ChangePasswordAsync(request.UserId, request.NewPassword, ct);
-        return Ok();
+        return Ok(new OperationResult(true));
     }
 
     [HttpPost("block")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> BlockUser([FromBody] ChangeBlockStatusRequest request, CancellationToken ct)
+    public async Task<ActionResult<OperationResult>> BlockUser([FromBody] ChangeBlockStatusRequest request, CancellationToken ct)
     {
         await _service.ChangeBlockStatusAsync(request.UserId, request.IsActive, ct);
-        return Ok();
+        return Ok(new OperationResult(true));
     }
 
     [HttpDelete]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete([FromQuery] Guid guid, CancellationToken ct)
+    public async Task<ActionResult<OperationResult>> Delete([FromQuery] Guid guid, CancellationToken ct)
     {
         await _service.DeleteUserAsync(guid, ct);
-        return Ok();
+        return Ok(new OperationResult(true));
     }
 
     [HttpGet("list")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> List(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<UserListItemDto>>> List(CancellationToken ct)
     {
         var users = await _service.GetAllAsync(ct);
         return Ok(users);

@@ -1,6 +1,7 @@
 ﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.Domain;
 using LicenseRemake.Domain.Errors;
+using LicenseRemake.Domain.Helpers;
 using LicenseRemake.DTO.Auth;
 using LicenseRemake.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -59,8 +60,8 @@ public class TokenService : ITokenService
         return new TokenResponse(
             access,
             refreshRaw,
-            DateTime.UtcNow,
-            DateTime.UtcNow.AddMinutes(30),
+            DateUtils.ToKyiv(DateTime.UtcNow),
+            DateUtils.ToKyiv(DateTime.UtcNow.AddMinutes(30)),
             user.Role,
             user.Username);
     }

@@ -1,6 +1,7 @@
 ﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.Domain;
 using LicenseRemake.Domain.Errors;
+using LicenseRemake.Domain.Helpers;
 using LicenseRemake.DTO.Licensing;
 using LicenseRemake.External;
 using LicenseRemake.Infrastructure;
@@ -89,8 +90,8 @@ public class LicensingService : ILicensingService
             cancellationToken);
 
         return new LicenseResponse(
-            expirationDate.Value,
-            signature);
+                DateUtils.ToKyiv(expirationDate.Value),
+                signature);
     }
 
     private string GenerateSignature(string serialNumber, DateTime expirationDate)

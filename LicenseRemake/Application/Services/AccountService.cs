@@ -1,6 +1,8 @@
 ﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.Domain;
 using LicenseRemake.Domain.Errors;
+using LicenseRemake.Domain.Helpers;
+using LicenseRemake.DTO.AdminPanel;
 using LicenseRemake.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,11 +37,11 @@ public class AccountService : IAccountService
         await _context.SaveChangesAsync(ct);
     }
 
-    public async Task CreateUserAsync(
-        string userName,
-        string password,
-        int userTypeId,
-        CancellationToken ct)
+    public async Task<Guid> CreateUserAsync(
+    string userName,
+    string password,
+    int userTypeId,
+    CancellationToken ct)
     {
         if (await _context.AppUsers.AnyAsync(x => x.Username == userName, ct))
             throw new ResponseException(
@@ -77,6 +79,8 @@ public class AccountService : IAccountService
                 "Failed to create user",
                 inner: ex);
         }
+
+        return user.Id;
     }
 
     public async Task ChangePasswordAsync(Guid userId, string newPassword, CancellationToken ct)
@@ -124,10 +128,17 @@ public class AccountService : IAccountService
         await _context.SaveChangesAsync(ct);
     }
 
-    public async Task<IEnumerable<AppUser>> GetAllAsync(CancellationToken ct)
+    public async Task<IEnumerable<UserListItemDto>> GetAllAsync(CancellationToken ct)
     {
         return await _context.AppUsers
             .AsNoTracking()
+            .Select(x => new UserListItemDto(
+                x.Id,
+                x.Username,
+                x.Role,
+                x.IsActive,
+               DateUtils.ToKyiv(x.CreatedAt)
+            ))
             .ToListAsync(ct);
     }
 }
