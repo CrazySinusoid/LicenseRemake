@@ -1,4 +1,5 @@
 ﻿using LicenseRemake.Application.Interfaces;
+using LicenseRemake.Domain.Helpers;
 using LicenseRemake.DTO.Licensing;
 using LicenseRemake.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -24,10 +25,10 @@ public class LicenseLogService : ILicenseLogService
             query = query.Where(x => x.FcNumber == request.SerialNumber);
 
         if (request.DateFrom.HasValue)
-            query = query.Where(x => x.DateIssue >= request.DateFrom.Value);
+            query = query.Where(x => x.DateIssue >= DateUtils.ToUtc(request.DateFrom.Value));
 
         if (request.DateTo.HasValue)
-            query = query.Where(x => x.DateIssue <= request.DateTo.Value);
+            query = query.Where(x => x.DateIssue < DateUtils.ToUtc(request.DateTo.Value));
 
         var total = await query.CountAsync(cancellationToken);
 
@@ -38,8 +39,8 @@ public class LicenseLogService : ILicenseLogService
             .Select(x => new LicenseLogDto(
                 x.FcNumber,
                 x.Host,
-                x.DateIssue,
-                x.DateExpired,
+                DateUtils.ToKyiv(x.DateIssue),
+                DateUtils.ToKyiv(x.DateExpired),
                 x.Signature))
             .ToListAsync(cancellationToken);
 

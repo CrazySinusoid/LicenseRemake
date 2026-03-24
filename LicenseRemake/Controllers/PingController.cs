@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using LicenseRemake.Domain.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LicenseRemake.Controllers;
@@ -14,7 +15,7 @@ public class PingController : ControllerBase
         return Ok(new
         {
             Status = "OK",
-            UtcNow = DateTime.UtcNow
+            LocalNow = DateUtils.ToKyiv(DateTime.UtcNow)
         });
     }
 
@@ -26,7 +27,7 @@ public class PingController : ControllerBase
         {
             Status = "Authorized",
             User = User.Identity?.Name,
-            UtcNow = DateTime.UtcNow
+            LocalNow = DateUtils.ToKyiv(DateTime.UtcNow)
         });
     }
 }

@@ -1,12 +1,14 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using LicenseRemake.Application.Interfaces;
+﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.Domain;
+using LicenseRemake.Domain.Errors;
+using LicenseRemake.Domain.Helpers;
 using LicenseRemake.DTO.Licensing;
 using LicenseRemake.External;
 using LicenseRemake.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace LicenseRemake.Application.Services;
 
@@ -35,7 +37,9 @@ public class LicensingService : ILicensingService
             .RelevantLicenseInfo(serialNumber, cancellationToken);
 
         if (expirationDate == null)
-            throw new Exception("Cash register not registered or license not valid");
+            throw new ResponseException(
+                ResponseErrorCode.EntityNotFound,
+                $"License not found for serial '{serialNumber}'");
 
         var signature = GenerateSignature(serialNumber, expirationDate.Value);
 
@@ -86,8 +90,8 @@ public class LicensingService : ILicensingService
             cancellationToken);
 
         return new LicenseResponse(
-            expirationDate.Value,
-            signature);
+                DateUtils.ToKyiv(expirationDate.Value),
+                signature);
     }
 
     private string GenerateSignature(string serialNumber, DateTime expirationDate)

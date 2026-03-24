@@ -15,5 +15,5 @@ public class ApiErrorResponse
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? param { get; set; }
 
-    public DateTime time_stamp { get; set; } = DateTime.UtcNow;
+    public DateTime time_stamp { get; set; }
 }

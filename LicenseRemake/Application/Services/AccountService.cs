@@ -1,5 +1,8 @@
 ﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.Domain;
+using LicenseRemake.Domain.Errors;
+using LicenseRemake.Domain.Helpers;
+using LicenseRemake.DTO.AdminPanel;
 using LicenseRemake.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +20,9 @@ public class AccountService : IAccountService
     public async Task CreateAdminAsync(CancellationToken ct)
     {
         if (await _context.AppUsers.AnyAsync(ct))
-            throw new Exception("Admin already exists");
+            throw new ResponseException(
+                ResponseErrorCode.EntityAlreadyExists,
+                "Admin already exists");
 
         var admin = new AppUser
         {
@@ -32,20 +37,24 @@ public class AccountService : IAccountService
         await _context.SaveChangesAsync(ct);
     }
 
-    public async Task CreateUserAsync(
-        string userName,
-        string password,
-        int userTypeId,
-        CancellationToken ct)
+    public async Task<Guid> CreateUserAsync(
+    string userName,
+    string password,
+    int userTypeId,
+    CancellationToken ct)
     {
         if (await _context.AppUsers.AnyAsync(x => x.Username == userName, ct))
-            throw new Exception("User already exists");
+            throw new ResponseException(
+                ResponseErrorCode.EntityAlreadyExists,
+                $"Username '{userName}' already exists");
 
         string role = userTypeId switch
         {
             1 => "Admin",
             2 => "User",
-            _ => throw new Exception("Invalid UserTypeId")
+            _ => throw new ResponseException(
+                ResponseErrorCode.EntityNotFound,
+                $"Invalid UserTypeId: {userTypeId}")
         };
 
         var user = new AppUser
@@ -58,15 +67,31 @@ public class AccountService : IAccountService
         };
 
         _context.AppUsers.Add(user);
-        await _context.SaveChangesAsync(ct);
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseException(
+                ResponseErrorCode.DatabaseError,
+                "Failed to create user",
+                inner: ex);
+        }
+
+        return user.Id;
     }
 
     public async Task ChangePasswordAsync(Guid userId, string newPassword, CancellationToken ct)
     {
-        var user = await _context.AppUsers.FirstOrDefaultAsync(x => x.Id == userId, ct);
+        var user = await _context.AppUsers
+            .FirstOrDefaultAsync(x => x.Id == userId, ct);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new ResponseException(
+                ResponseErrorCode.UserNotFound,
+                userId.ToString());
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
 
@@ -75,10 +100,13 @@ public class AccountService : IAccountService
 
     public async Task ChangeBlockStatusAsync(Guid userId, bool isActive, CancellationToken ct)
     {
-        var user = await _context.AppUsers.FirstOrDefaultAsync(x => x.Id == userId, ct);
+        var user = await _context.AppUsers
+            .FirstOrDefaultAsync(x => x.Id == userId, ct);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new ResponseException(
+                ResponseErrorCode.UserNotFound,
+                userId.ToString());
 
         user.IsActive = isActive;
 
@@ -87,20 +115,30 @@ public class AccountService : IAccountService
 
     public async Task DeleteUserAsync(Guid userId, CancellationToken ct)
     {
-        var user = await _context.AppUsers.FirstOrDefaultAsync(x => x.Id == userId, ct);
+        var user = await _context.AppUsers
+            .FirstOrDefaultAsync(x => x.Id == userId, ct);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new ResponseException(
+                ResponseErrorCode.UserNotFound,
+                userId.ToString());
 
         _context.AppUsers.Remove(user);
 
         await _context.SaveChangesAsync(ct);
     }
 
-    public async Task<IEnumerable<AppUser>> GetAllAsync(CancellationToken ct)
+    public async Task<IEnumerable<UserListItemDto>> GetAllAsync(CancellationToken ct)
     {
         return await _context.AppUsers
             .AsNoTracking()
+            .Select(x => new UserListItemDto(
+                x.Id,
+                x.Username,
+                x.Role,
+                x.IsActive,
+               DateUtils.ToKyiv(x.CreatedAt)
+            ))
             .ToListAsync(ct);
     }
 }

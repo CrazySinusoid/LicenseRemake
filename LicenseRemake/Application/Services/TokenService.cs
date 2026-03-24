@@ -1,13 +1,14 @@
 ﻿using LicenseRemake.Application.Interfaces;
 using LicenseRemake.Domain;
+using LicenseRemake.Domain.Errors;
+using LicenseRemake.Domain.Helpers;
 using LicenseRemake.DTO.Auth;
 using LicenseRemake.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-
-using Microsoft.EntityFrameworkCore;
 
 public class TokenService : ITokenService
 {
@@ -20,19 +21,26 @@ public class TokenService : ITokenService
         _config = config;
     }
 
-    public async Task<TokenResponse> PasswordLoginAsync(PasswordLoginRequest request, string ip, CancellationToken ct)
+    public async Task<TokenResponse> PasswordLoginAsync(
+        PasswordLoginRequest request,
+        string ip,
+        CancellationToken ct)
     {
         var user = await _db.AppUsers
             .FirstOrDefaultAsync(x => x.Username == request.Username, ct);
 
         if (user == null)
-            throw new Exception("Invalid credentials");
+            throw new ResponseException(
+                ResponseErrorCode.InvalidCredentials);
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            throw new Exception("Invalid credentials");
+            throw new ResponseException(
+                ResponseErrorCode.InvalidCredentials);
 
         if (!user.IsActive)
-            throw new Exception("User inactive");
+            throw new ResponseException(
+                ResponseErrorCode.UserIsBlocked,
+                user.Username);
 
         var refreshRaw = Guid.NewGuid().ToString("N");
 
@@ -52,20 +60,24 @@ public class TokenService : ITokenService
         return new TokenResponse(
             access,
             refreshRaw,
-            DateTime.UtcNow,
-            DateTime.UtcNow.AddMinutes(30),
+            DateUtils.ToKyiv(DateTime.UtcNow),
+            DateUtils.ToKyiv(DateTime.UtcNow.AddMinutes(30)),
             user.Role,
-            user.Username
-        );
+            user.Username);
     }
 
-    public async Task<string> EmitTerminalRefreshTokenAsync(EmitTerminalRefreshTokenRequest request, string ip, CancellationToken ct)
+    public async Task<string> EmitTerminalRefreshTokenAsync(
+        EmitTerminalRefreshTokenRequest request,
+        string ip,
+        CancellationToken ct)
     {
         var user = await _db.AppUsers
             .FirstOrDefaultAsync(x => x.Id == request.UserGuid, ct);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new ResponseException(
+                ResponseErrorCode.UserNotFound,
+                request.UserGuid.ToString());
 
         var refreshRaw = Guid.NewGuid().ToString("N");
 
@@ -78,12 +90,16 @@ public class TokenService : ITokenService
         };
 
         _db.RefreshTokens.Add(refresh);
+
         await _db.SaveChangesAsync(ct);
 
         return refreshRaw;
     }
 
-    public async Task<TokenResponse> RefreshTokenLoginAsync(RefreshTokenLoginRequest request, string ip, CancellationToken ct)
+    public async Task<TokenResponse> RefreshTokenLoginAsync(
+        RefreshTokenLoginRequest request,
+        string ip,
+        CancellationToken ct)
     {
         var tokens = await _db.RefreshTokens
             .Include(x => x.User)
@@ -94,9 +110,14 @@ public class TokenService : ITokenService
             BCrypt.Net.BCrypt.Verify(request.RefreshToken, x.Token));
 
         if (token == null)
-            throw new Exception("Invalid refresh token");
+            throw new ResponseException(
+                ResponseErrorCode.InvalidCredentials,
+                "Invalid refresh token");
 
-        var access = GenerateJwt(token.User.Id, token.User.Username, "Global");
+        var access = GenerateJwt(
+            token.User.Id,
+            token.User.Username,
+            "Global");
 
         return new TokenResponse(
             access,
@@ -104,8 +125,7 @@ public class TokenService : ITokenService
             DateTime.UtcNow,
             DateTime.UtcNow.AddMinutes(30),
             "Global",
-            token.User.Username
-        );
+            token.User.Username);
     }
 
     private string GenerateJwt(Guid userId, string username, string role)
