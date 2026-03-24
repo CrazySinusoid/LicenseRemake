@@ -7,11 +7,11 @@ public interface IAccountService
 
     Task<Guid> CreateUserAsync(string userName, string password, int userTypeId, CancellationToken ct);
 
-    Task ChangePasswordAsync(Guid userId, string newPassword, CancellationToken ct);
+    Task<UserDto> ChangePasswordAsync(Guid userId, string newPassword, CancellationToken ct);
 
-    Task ChangeBlockStatusAsync(Guid userId, bool isActive, CancellationToken ct);
+    Task<UserDto> ChangeBlockStatusAsync(Guid userId, bool isActive, CancellationToken ct);
 
-    Task DeleteUserAsync(Guid userId, CancellationToken ct);
+    Task<UserDto> DeleteUserAsync(Guid userId, CancellationToken ct);
 
-    Task<IEnumerable<UserListItemDto>> GetAllAsync(CancellationToken ct);
+    Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct);
 }

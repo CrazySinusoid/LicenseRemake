@@ -5,6 +5,7 @@ using LicenseRemake.Infrastructure;
 using LicenseRemake.Infrastructure.Configurations;
 using LicenseRemake.Infrastructure.Filters;
 using LicenseRemake.Infrastructure.Middleware;
+using LicenseRemake.Infrastructure.Profiles;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -77,6 +78,9 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<DataDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
+builder.Services.AddAutoMapper(typeof(LicenseProfile).Assembly);
 
 var app = builder.Build();
 

@@ -18,10 +18,16 @@ public class AccountController : ControllerBase
 
     [HttpPost("create-admin")]
     [AllowAnonymous]
-    public async Task<ActionResult<OperationResult>> CreateAdmin(CancellationToken ct)
+    public async Task<ActionResult<ApiErrorResponse>> CreateAdmin(CancellationToken ct)
     {
         await _service.CreateAdminAsync(ct);
-        return Ok(new OperationResult(true));
+
+        return Ok(new ApiErrorResponse
+        {
+            err_code = 0,
+            err_code_string = "no_error",
+            time_stamp = DateTime.UtcNow
+        });
     }
 
     [HttpPost("create")]
@@ -38,31 +44,31 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("change-password")]
-    public async Task<ActionResult<OperationResult>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    public async Task<ActionResult<UserDto>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
     {
-        await _service.ChangePasswordAsync(request.UserId, request.NewPassword, ct);
-        return Ok(new OperationResult(true));
+        var user = await _service.ChangePasswordAsync(request.UserId, request.NewPassword, ct);
+        return Ok(user);
     }
 
     [HttpPost("block")]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<OperationResult>> BlockUser([FromBody] ChangeBlockStatusRequest request, CancellationToken ct)
+    public async Task<ActionResult<UserDto>> BlockUser([FromBody] ChangeBlockStatusRequest request, CancellationToken ct)
     {
-        await _service.ChangeBlockStatusAsync(request.UserId, request.IsActive, ct);
-        return Ok(new OperationResult(true));
+        var user = await _service.ChangeBlockStatusAsync(request.UserId, request.IsActive, ct);
+        return Ok(user);
     }
 
     [HttpDelete]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<OperationResult>> Delete([FromQuery] Guid guid, CancellationToken ct)
+    public async Task<ActionResult<UserDto>> Delete([FromQuery] Guid guid, CancellationToken ct)
     {
-        await _service.DeleteUserAsync(guid, ct);
-        return Ok(new OperationResult(true));
+        var user = await _service.DeleteUserAsync(guid, ct);
+        return Ok(user);
     }
 
     [HttpGet("list")]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<IEnumerable<UserListItemDto>>> List(CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<UserDto>>> List(CancellationToken ct)
     {
         var users = await _service.GetAllAsync(ct);
         return Ok(users);
